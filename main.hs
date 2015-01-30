@@ -6,11 +6,15 @@ import Graphics.Gloss
 import World
 import RndWorld
 import Visualization
+import Simulation
 
 
 main = do
-  gen <- getStdGen
-  let pic = visualize (rndWorld gen (20, 20))
-  display (InWindow "WaterSimulation" (512, 512) (0, 0))
-          bgcolor
-          pic
+  gen0 <- getStdGen
+  let (world0, gen1) = rndWorld gen0 (40, 40)
+  simulate (InWindow "WaterSimulation" (512, 512) (0, 0))
+           bgcolor
+           10
+           (gen1, world0)
+           (\(_, world) -> Translate (-240) (-240) (visualize world))
+           (const $ const simStep)

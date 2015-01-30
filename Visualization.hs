@@ -9,7 +9,8 @@ import World
 visualize :: World -> Picture
 visualize world = Pictures
   [let e = world ! (x, y) in
-   Color (soilColor (soil e)) $ coordinateSquare x y
+   Pictures [Color (soilColor (soil e)) $ coordinateSquare x y
+            ,Color (waterColor (water e)) $ coordinateSquare x y]
    | (x, y) <- indices world]
   where
     coordinateSquare x y = Polygon [(l x, l y), (h x, l y), (h x, h y), (l x, h y)]
@@ -19,13 +20,20 @@ visualize world = Pictures
 
 
 soilColor :: Float -> Color
-soilColor s = makeColor (bound $  0.1+s*0.07)
-                        (bound $  0.2-s*0.00)
-                        (bound $  0.0+s*0.02)
+soilColor s = makeColor (bound $  0.0+s*0.08)
+                        (bound $  0.2+s*0.03)
+                        (bound $  0.0+s*0.00)
                         1
-  where bound x | x < 0     = 0
-                | x > 1     = 1
-                | otherwise = x
+
+waterColor :: Float -> Color
+waterColor w = makeColor 0 0 1 (bound w)
+
+
+bound :: Float -> Float
+bound x | x < 0     = 0
+        | x > 1     = 1
+        | otherwise = x
+
 
 bgcolor :: Color
 bgcolor = makeColor 0 0 0 1
