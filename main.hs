@@ -11,7 +11,7 @@ import Simulation
 
 main = do
   gen0 <- getStdGen
-  let (world0, gen1) = rndWorld gen0 (40, 40)
+  let (gen1, world0) = rndWorld gen0 (40, 40)
   simulate (InWindow "WaterSimulation" (512, 512) (0, 0))
            bgcolor
            10
