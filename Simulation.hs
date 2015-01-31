@@ -27,7 +27,7 @@ rain (gen, world) = (gen', array (bounds world) worldList')
 
 
 raindrop :: (RandomGen g) => (g, WorldElement) -> (g, WorldElement)
-raindrop (gen, we) = (gen', if rand `mod` 1000 <= 1
+raindrop (gen, we) = (gen', if rand `mod` 1000 <= 2
                             then we {water = water we + dropSize}
                             else we
                      )
@@ -62,19 +62,30 @@ calculateFlux_elem world pos = thisElem {flux = actualFlux}
           boundFlux $ fn2flux desiredFlux
         desiredFlux dir = max 0 $ (  waterLevel thisElem
                                   - waterLevel (world ! neighbour pos dir)
-                                  ) / 5
+                                  ) / 6
         boundFlux fl | totalFlux fl <= water thisElem  = fl
                      | otherwise  = (water thisElem / totalFlux fl) `fluxSMult` fl
         waterLevel we = soil we + water we
 
 
 applyFlux_elem :: World -> (Int, Int) -> WorldElement
-applyFlux_elem world pos = thisElem {water = newWater}
+applyFlux_elem world pos = thisElem {water = newWater, soil = newSoil}
   where thisElem = world ! pos
+        -- water transport
         newWater = max 0 $
           water thisElem
           - totalFlux (flux thisElem)
           + sum [fluxTo (opposite dir) (world ! neighbour pos dir) | dir <- directions]
+        -- soil transport
+        newSoil = soil thisElem + soilTransportFactor *
+          (- sum [soilTransportTo dir | dir <- directions]
+           + sum [soilTransportFrom dir | dir <- directions])
+        soilTransportTo dir = if water thisElem == 0 then 0 else
+                              (fluxTo dir thisElem)**2 / water thisElem
+        soilTransportFrom dir = if water neigh == 0 then 0 else
+                                (fluxTo (opposite dir) neigh)**2 / water neigh
+          where neigh = world ! neighbour pos dir
+        soilTransportFactor = 1.0
 
 
 processExceptBoundary :: (World -> (Int, Int) -> WorldElement) -> World -> World
