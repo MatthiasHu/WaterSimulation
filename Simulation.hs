@@ -9,7 +9,7 @@ import World
 
 
 simStep :: (RandomGen g) => (g, World) -> (g, World)
-simStep = mapSnd (soilHarmonization 0.01 . waterMovement) . rain
+simStep = mapSnd waterMovement . rain
   where mapSnd f (a, b) = (a, f b)
 
 
@@ -27,15 +27,12 @@ rain (gen, world) = (gen', array (bounds world) worldList')
 
 
 raindrop :: (RandomGen g) => (g, WorldElement) -> (g, WorldElement)
-raindrop (gen, we) = (gen', if rand `mod` 1000 <= 10
-                            then we {water = newWater
-                                    ,flux = (water we / newWater) `fluxSMult` flux we
-                                    }
+raindrop (gen, we) = (gen', if rand `mod` 1000 <= 1
+                            then we {water = water we + dropSize}
                             else we
                      )
   where (rand, gen') = next gen
         dropSize = 0.3
-        newWater = water we + dropSize
 
 
 source :: World -> World
@@ -54,38 +51,30 @@ soilHarm_elem intensity world pos =
 
 
 waterMovement :: World -> World
-waterMovement = processExceptBoundary waterMove_elem
+waterMovement =  processExceptBoundary calculateFlux_elem
+               . processExceptBoundary applyFlux_elem
 
-waterMove_elem :: World -> (Int, Int) -> WorldElement
-waterMove_elem world pos = thisElem {soil = newSoil, water = newWater, flux = fn2flux newFlux}
+
+calculateFlux_elem :: World -> (Int, Int) -> WorldElement
+calculateFlux_elem world pos = thisElem {flux = actualFlux}
   where thisElem = world ! pos
-        -- water transport:
-        newWater = remainingWater + sum [influx dir | dir <- directions]
-        remainingWater = water thisElem - sum [drain dir | dir <- directions]
-        influx dir = fluxTo (opposite dir) (world ! neighbour pos dir)
-                     * water (world ! neighbour pos dir)
-        drain dir = fluxTo dir thisElem
-                    * water thisElem
-        -- soil transport:
-        newSoil = soil thisElem + soilTransportFactor * (sum [soilInflux dir | dir <- directions]
-                                                        - sum [soilDrain dir | dir <- directions])
-        soilInflux dir = influx dir * fluxTo (opposite dir) (world ! neighbour pos dir)
-        soilDrain dir = drain dir * fluxTo dir thisElem
-        soilTransportFactor = 10.0
-        -- water momentum transport:
-        newFlux dir = if newWater == 0 then 0 else
-          bound025 $ (oldFluxScaled + carriedInFlux) / newWater + gravFlux
-          where oldFluxScaled = remainingWater * fluxTo dir thisElem
-                carriedInFlux = sum [influx dir2 * fluxTo dir (world ! neighbour pos dir2)
-                                    | dir2 <- List.delete dir directions]
-                gravFlux = grav * incline
-                incline = newSoil + newWater
-                          - soil (world ! neighbour pos dir) - water (world ! neighbour pos dir) 
-        bound025 x | x < 0     = 0
-                   | x > 0.25   = 0.25
-                   | otherwise = x
-        grav = 0.5
+        actualFlux = if water thisElem == 0 then noFlux else
+          boundFlux $ fn2flux desiredFlux
+        desiredFlux dir = max 0 $ (  waterLevel thisElem
+                                  - waterLevel (world ! neighbour pos dir)
+                                  ) / 5
+        boundFlux fl | totalFlux fl <= water thisElem  = fl
+                     | otherwise  = (water thisElem / totalFlux fl) `fluxSMult` fl
+        waterLevel we = soil we + water we
 
+
+applyFlux_elem :: World -> (Int, Int) -> WorldElement
+applyFlux_elem world pos = thisElem {water = newWater}
+  where thisElem = world ! pos
+        newWater = max 0 $
+          water thisElem
+          - totalFlux (flux thisElem)
+          + sum [fluxTo (opposite dir) (world ! neighbour pos dir) | dir <- directions]
 
 
 processExceptBoundary :: (World -> (Int, Int) -> WorldElement) -> World -> World

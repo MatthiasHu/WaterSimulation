@@ -36,7 +36,7 @@ slope :: (Int, Int) -> World
 slope (w, h) =
   array ((0, 0), (w, h)) [((x, y), WorldElement {soil = let nx = fromIntegral (w-x)
                                                             w' = fromIntegral w
-                                                        in (2*nx+nx*nx/w') * 0.2
+                                                        in (nx+nx*nx/w') * 0.3
                                                 ,water = 0.0
                                                 ,flux = noFlux})
                           | x <- [0..w], y <- [0..h] ]
@@ -52,6 +52,3 @@ randomizeWorldElement :: (RandomGen g) => Float -> g -> WorldElement -> (g, Worl
 randomizeWorldElement intensity g we = (g', we {soil = soil we + randFloat})
   where (randFloat, g') = randomR (-intensity, intensity) g
 
-
-noFlux :: Flux
-noFlux = Flux 0 0 0 0

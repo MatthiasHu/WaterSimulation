@@ -12,10 +12,11 @@ data WorldElement = WorldElement
   ,water :: Float
   ,flux :: Flux
   }
+  deriving Show
 
 data Flux = Flux
   {left, right, up, down :: Float}
-
+  deriving Show
 
 
 data Direction = Left | Right | Up | Down
@@ -30,9 +31,15 @@ fluxTo Right = right . flux
 fluxTo Up = up . flux
 fluxTo Down = down . flux
 
+totalFlux :: Flux -> Float
+totalFlux fl = left fl + right fl + up fl + down fl
+
 fn2flux :: (Direction -> Float) -> Flux
 fn2flux f = Flux {left = f Left, right = f Right
                  ,up = f Up, down = f Down}
+
+noFlux :: Flux
+noFlux = Flux 0 0 0 0
 
 neighbour :: (Int, Int) -> Direction -> (Int, Int)
 neighbour (x, y) Left  = (x-1, y)
