@@ -13,9 +13,10 @@ import Simulation  -- for soilHarmonization
 
 rndWorld :: (RandomGen g) => (Int, Int) -> Rand g World
 rndWorld size = do
+--  let w = slope size
   w <- mountainsWorld size
-  w' <- randomizeWorld 2.0 w
-  return $ (3 `times` soilHarmonization 0.1) w'
+  w' <- randomizeWorld 10.0 w
+  return $ (3 `times` soilHarmonization 0.2) $ prepareBoundary w'
   where times n f x | n <= 0     = x
                     | otherwise  = f (times (n-1) f x)
 

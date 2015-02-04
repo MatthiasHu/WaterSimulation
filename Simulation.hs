@@ -27,12 +27,12 @@ rain (gen, world) = (gen', array (bounds world) worldList')
 
 
 raindrop :: (RandomGen g) => (g, WorldElement) -> (g, WorldElement)
-raindrop (gen, we) = (gen', if rand `mod` 1000 <= 40
+raindrop (gen, we) = (gen', if rand `mod` 1000 <= 20
                             then we {water = water we + dropSize}
                             else we
                      )
   where (rand, gen') = next gen
-        dropSize = 0.03
+        dropSize = 0.1
 
 
 source :: World -> World
@@ -60,9 +60,9 @@ calculateFlux_elem world pos = thisElem {flux = actualFlux}
   where thisElem = world ! pos
         actualFlux = if water thisElem == 0 then noFlux else
           boundFlux $ fn2flux desiredFlux
-        desiredFlux dir = max 0 $ (  waterLevel thisElem
-                                  - waterLevel (world ! neighbour pos dir)
-                                  ) / 6
+        desiredFlux dir = max 0 $ frictionFactor * incline dir / 6
+        incline dir = waterLevel thisElem - waterLevel (world ! neighbour pos dir)
+        frictionFactor = min 1 $ 0.5 + water thisElem
         boundFlux fl | totalFlux fl <= water thisElem  = fl
                      | otherwise  = (water thisElem / totalFlux fl) `fluxSMult` fl
         waterLevel we = soil we + water we

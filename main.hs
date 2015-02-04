@@ -12,7 +12,7 @@ import Simulation
 
 main = do
   gen0 <- getStdGen
-  let (world0, gen1) = runRand (rndWorld (50, 50)) gen0
+  let (world0, gen1) = runRand (rndWorld (50, 30)) gen0
   simulate (InWindow "WaterSimulation" (512, 512) (0, 0))
            bgcolor
            4   -- fps
