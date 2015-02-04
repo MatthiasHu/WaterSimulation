@@ -1,21 +1,41 @@
 module RndWorld where
 
-import System.Random
+import Control.Monad (replicateM)
+import Control.Monad.Random
 import Data.Array
 
 import IterativeListProcess
 import World
-import Simulation
+import Simulation  -- for soilHarmonization
 
 
 
 
-rndWorld :: (RandomGen g) => g -> (Int, Int) -> (g, World)
-rndWorld g size = mapSnd ((5 `times` soilHarmonization 0.2) . prepareBoundary) $
-  randomizeWorld 2.0 g $ slope size
-  where mapSnd f (a, b) = (a, f b)
-        times n f x | n <= 0     = x
+rndWorld :: (RandomGen g) => (Int, Int) -> Rand g World
+rndWorld size = do
+  w <- mountainsWorld size
+  w' <- randomizeWorld 2.0 w
+  return $ (3 `times` soilHarmonization 0.1) w'
+  where times n f x | n <= 0     = x
                     | otherwise  = f (times (n-1) f x)
+
+
+mountainsWorld :: (RandomGen g) => (Int, Int) -> Rand g World
+mountainsWorld (w, h) = do
+  mountainTops <- replicateM 20 $ oneMountainTop (w, h)
+  let height x y = foldl max (-5) $ map (singleHeight x y) mountainTops
+      singleHeight x y mT = snd mT - d (x, y) (fst mT)
+      d (x1, y1) (x2, y2) = let dx = fromIntegral (x2-x1); dy = fromIntegral (y2-y1)
+                            in sqrt(dx*dx+dy*dy)
+  return $ array ((0, 0), (w, h))
+    [((x, y), WorldElement (height x y) 0 noFlux) | x <- [0..w], y <- [0..h]]
+
+oneMountainTop :: (RandomGen g) => (Int, Int) -> Rand g ((Int, Int), Float)
+oneMountainTop (w, h) = do
+  x <- getRandomR (-(w `div` 4), w + (w `div` 4))
+  y <- getRandomR (-(h `div` 4), h + (h `div` 4))
+  height <- getRandomR (10.0, 30.0)
+  return ((x, y), height)
 
 
 smallWorld :: World
@@ -41,16 +61,16 @@ slope (w, h) =
                                                 ,flux = noFlux})
                           | x <- [0..w], y <- [0..h] ]
 
-randomizeWorld :: (RandomGen g) => Float -> g -> World -> (g, World)
-randomizeWorld intensity g world = (g', array (bounds world) worldList')
-  where (g', worldList') = processIteratively (applyToRightThing $ randomizeWorldElement intensity)
-                                              g
-                                              (assocs world)
-        applyToRightThing f (a, (i, b)) = let (a', b') = f a b in (a', (i, b'))
 
-randomizeWorldElement :: (RandomGen g) => Float -> g -> WorldElement -> (g, WorldElement)
-randomizeWorldElement intensity g we = (g', we {soil = soil we + randFloat})
-  where (randFloat, g') = randomR (-intensity, intensity) g
+randomizeWorld :: (RandomGen g) => Float -> World -> Rand g World
+randomizeWorld intensity world = do
+  newWEs <- mapM (randomizeWorldElement 1.0) (elems world)
+  return $ listArray (bounds world) newWEs
+
+randomizeWorldElement :: (RandomGen g) => Float -> WorldElement -> Rand g WorldElement
+randomizeWorldElement intensity we = do
+  randFloat <- getRandomR (-intensity, intensity)
+  return we {soil = soil we + randFloat}
 
 
 prepareBoundary :: World -> World

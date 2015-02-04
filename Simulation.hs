@@ -27,12 +27,12 @@ rain (gen, world) = (gen', array (bounds world) worldList')
 
 
 raindrop :: (RandomGen g) => (g, WorldElement) -> (g, WorldElement)
-raindrop (gen, we) = (gen', if rand `mod` 1000 <= 2
+raindrop (gen, we) = (gen', if rand `mod` 1000 <= 40
                             then we {water = water we + dropSize}
                             else we
                      )
   where (rand, gen') = next gen
-        dropSize = 0.3
+        dropSize = 0.03
 
 
 source :: World -> World
